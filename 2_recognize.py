@@ -105,7 +105,18 @@ def recognize_faces():
             confidence = prediction_proba[0][predicted_class] * 100
             
             # Get predicted name
-            predicted_name = label_map[predicted_class]
+            predicted_label = label_map[predicted_class]
+            
+            # Parse label to get name and expression
+            if '_' in predicted_label:
+                parts = predicted_label.split('_')
+                predicted_name = parts[0]
+                predicted_expression = parts[1] if len(parts) > 1 else ""
+                display_label = f"{predicted_name} - {predicted_expression}"
+            else:
+                predicted_name = predicted_label
+                predicted_expression = ""
+                display_label = predicted_name
             
             # Choose color based on confidence
             if confidence > 70:
@@ -119,7 +130,7 @@ def recognize_faces():
             cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
             
             # Display name and confidence
-            label = f"{predicted_name} ({confidence:.1f}%)"
+            label = f"{display_label} ({confidence:.1f}%)"
             
             # Background for text
             text_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]

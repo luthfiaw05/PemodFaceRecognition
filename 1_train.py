@@ -38,8 +38,12 @@ def load_dataset(dataset_path='dataset', img_size=(64, 64)):
             parts = filename.rsplit('.', 1)[0].split('_')
             if len(parts) >= 3:
                 name = parts[0]  # Extract person's name
+                expression = parts[1]  # Extract expression
+                # Combine name and expression as label
+                label = f"{name}_{expression}"
             else:
                 name = parts[0] if parts else filename
+                label = name
             
             # Read and preprocess image
             img_path = os.path.join(dataset_path, filename)
@@ -59,10 +63,10 @@ def load_dataset(dataset_path='dataset', img_size=(64, 64)):
             img_vector = img.flatten()
             
             images.append(img_vector)
-            labels.append(name)
+            labels.append(label)
             
-            if name not in label_names:
-                label_names.append(name)
+            if label not in label_names:
+                label_names.append(label)
         
         except Exception as e:
             print(f"Error processing {filename}: {e}")
@@ -90,8 +94,8 @@ def load_dataset(dataset_path='dataset', img_size=(64, 64)):
     
     print(f"\nDataset loaded successfully!")
     print(f"Total samples: {len(X)}")
-    print(f"Number of people: {num_classes}")
-    print(f"People in dataset: {label_names}")
+    print(f"Number of classes (Name_Expression): {num_classes}")
+    print(f"Classes in dataset: {label_names}")
     print(f"Image size: {img_size}")
     print(f"Feature vector size: {X.shape[1]}")
     
@@ -114,7 +118,7 @@ def train_model():
     
     # Network architecture
     input_size = X.shape[1]  # Flattened image size
-    hidden_size = 800        # Hidden layer neurons
+    hidden_size = 128        # Hidden layer neurons
     output_size = y.shape[1] # Number of classes
     
     print(f"\n{'─' * 60}")

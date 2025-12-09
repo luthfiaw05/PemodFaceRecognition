@@ -112,20 +112,43 @@ def recognize_from_image(image_path, model, label_map, img_size):
         confidence = prediction_proba[0][predicted_class] * 100
         
         # Get predicted name
-        predicted_name = label_map[predicted_class]
+        predicted_label = label_map[predicted_class]
+        
+        # Parse label to get name and expression
+        if '_' in predicted_label:
+            parts = predicted_label.split('_')
+            predicted_name = parts[0]
+            predicted_expression = parts[1] if len(parts) > 1 else ""
+            display_label = f"{predicted_name} - {predicted_expression}"
+        else:
+            predicted_name = predicted_label
+            predicted_expression = ""
+            display_label = predicted_label
         
         # Print results
         print(f"\nFace #{idx}:")
-        print(f"  Predicted: {predicted_name}")
+        print(f"  Name: {predicted_name}")
+        if predicted_expression:
+            print(f"  Expression: {predicted_expression}")
         print(f"  Confidence: {confidence:.2f}%")
         
         # Get top 3 predictions
         top_3_indices = np.argsort(prediction_proba[0])[-3:][::-1]
         print(f"  Top 3 predictions:")
         for rank, class_idx in enumerate(top_3_indices, 1):
-            name = label_map[class_idx]
+            label = label_map[class_idx]
             conf = prediction_proba[0][class_idx] * 100
-            print(f"     {rank}. {name}: {conf:.2f}%")
+            
+            # Parse label
+            if '_' in label:
+                parts = label.split('_')
+                name = parts[0]
+                expr = parts[1] if len(parts) > 1 else ""
+                display = f"{name} - {expr}"
+            else:
+                display = label
+            
+            print(f"     {rank}. {display}: {conf:.2f}%")
         
         # Choose color based on confidence
         if confidence > 70:
@@ -142,7 +165,7 @@ def recognize_from_image(image_path, model, label_map, img_size):
         cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
         
         # Display name and confidence
-        label = f"{predicted_name} ({confidence:.1f}%)"
+        label = f"{display_label} ({confidence:.1f}%)"
         
         # Background for text
         text_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
