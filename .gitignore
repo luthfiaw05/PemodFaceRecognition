@@ -1,0 +1,56 @@
+// ...existing code...
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environments
+env/
+venv/
+.venv/
+ENV/
+
+# IDE / editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# pytest / coverage / build artifacts
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sensitive / runtime / large files (models, outputs, dataset)
+*.pkl
+face_model.pkl
+label_map.pkl
+img_size.pkl
+dataset/
+outputs/
+logs/
+
+# Common ML model files
+*.h5
+*.hdf5
+*.pt
+*.ckpt
+
+# Misc
+*.sqlite3
+*.log
+*.tmp
+*.bak

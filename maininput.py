@@ -9,7 +9,9 @@ def load_model_and_labels():
     
     if not os.path.exists('face_model.pkl'):
         print("[X] ERROR: Model file 'face_model.pkl' not found!")
-        print("Please run '1_train.py' first to train the model.")
+        print("\nYou need to train the model first.")
+        print("\nRun: python 1_train.py")
+        print("\nMake sure you have images in the 'dataset' folder.")
         return None, None, None
     
     # Load model
@@ -24,7 +26,7 @@ def load_model_and_labels():
     with open('img_size.pkl', 'rb') as f:
         img_size = pickle.load(f)
     
-    print("[OK] Model and labels loaded successfully!")
+    print("[OK] Model loaded successfully!")
     print(f"[OK] Recognized people: {list(label_map.values())}")
     
     return model, label_map, img_size
@@ -185,17 +187,17 @@ def main():
     """Main function for image-based recognition"""
     
     print("=" * 60)
-    print("   FACE RECOGNITION FROM IMAGE FILE - BPNN")
+    print("   FACE RECOGNITION FROM IMAGE FILE - INPUT MODE")
     print("=" * 60)
     
     # Load model
+    print("\n[Loading Model...]")
     model, label_map, img_size = load_model_and_labels()
     
     if model is None:
-        print("\n[Warning] Please train the model first by running:")
-        print("   python 1_train.py")
-        print("   OR")
-        print("   python maincam.py")
+        print("\n[Info] Train the model first:")
+        print("  Run: python 1_train.py")
+        print("\nMake sure you have images in 'dataset' folder.")
         return
     
     print("\n" + "-" * 60)
