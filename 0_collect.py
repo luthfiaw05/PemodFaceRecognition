@@ -18,7 +18,7 @@ def collect_faces():
     num_images = int(input("How many images to collect? (recommended: 20-50): "))
     
     # Initialize camera
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     
     if not cap.isOpened():
         print("ERROR: Cannot access camera!")
