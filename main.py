@@ -43,8 +43,11 @@ def print_menu():
     print("  2. Train Model (required once or when dataset changes)")
     print("  3. Real-time Recognition (camera)")
     print("  4. Recognize from Image File")
-    print("  5. Check System Status")
-    print("  6. Help & Information")
+    print("  5. Evaluate Model (Confusion Matrix & Metrics)")
+    print("  6. Compare BPNN: Custom vs Library")
+    print("  7. Compare: BPNN vs CNN")
+    print("  8. Check System Status")
+    print("  9. Help & Information")
     print("  0. Exit")
     print("-" * 70)
 
@@ -128,6 +131,53 @@ def image_recognition():
     
     print("[OK] Model found. Starting recognition...\n")
     os.system(f'"{sys.executable}" maininput.py')
+    input("\nPress Enter to continue...")
+
+def evaluate_model():
+    """Run model evaluation"""
+    clear_screen()
+    print_header()
+    print("\n>>> MODEL EVALUATION <<<\n")
+    
+    if not os.path.exists('face_model.pkl'):
+        print("[X] ERROR: Model not trained!")
+        print("\nPlease train the model first (Option 2)")
+        input("\nPress Enter to continue...")
+        return
+    
+    print("[OK] Starting evaluation...\n")
+    os.system(f'"{sys.executable}" 3_evaluation.py')
+    input("\nPress Enter to continue...")
+
+def compare_bpnn():
+    """Run BPNN comparison"""
+    clear_screen()
+    print_header()
+    print("\n>>> BPNN COMPARISON: CUSTOM vs LIBRARY <<<\n")
+    
+    if not os.path.exists('dataset'):
+        print("[X] ERROR: 'dataset' folder not found!")
+        input("\nPress Enter to continue...")
+        return
+    
+    print("[OK] Starting comparison...\n")
+    os.system(f'"{sys.executable}" 4_compare_bpnn.py')
+    input("\nPress Enter to continue...")
+
+def compare_cnn():
+    """Run CNN comparison"""
+    clear_screen()
+    print_header()
+    print("\n>>> BPNN vs CNN COMPARISON <<<\n")
+    
+    if not os.path.exists('dataset'):
+        print("[X] ERROR: 'dataset' folder not found!")
+        input("\nPress Enter to continue...")
+        return
+    
+    print("[OK] Starting comparison...\n")
+    print("Note: This may take several minutes...\n")
+    os.system(f'"{sys.executable}" 5_compare_cnn.py')
     input("\nPress Enter to continue...")
 
 def show_status():
@@ -286,7 +336,7 @@ def main():
         check_model_status()
         print_menu()
         
-        choice = input("\nEnter your choice (0-6): ").strip()
+        choice = input("\nEnter your choice (0-9): ").strip()
         
         if choice == '1':
             collect_images()
@@ -297,8 +347,14 @@ def main():
         elif choice == '4':
             image_recognition()
         elif choice == '5':
-            show_status()
+            evaluate_model()
         elif choice == '6':
+            compare_bpnn()
+        elif choice == '7':
+            compare_cnn()
+        elif choice == '8':
+            show_status()
+        elif choice == '9':
             show_help()
         elif choice == '0':
             clear_screen()
@@ -306,7 +362,7 @@ def main():
             print("Goodbye!\n")
             break
         else:
-            print("\n[X] Invalid choice! Please enter 0-6.")
+            print("\n[X] Invalid choice! Please enter 0-9.")
             input("Press Enter to continue...")
 
 if __name__ == "__main__":
