@@ -4,6 +4,10 @@ import pickle
 import os
 from bpnn import BPNN
 
+# KONFIGURASI THRESHOLD
+# Jika confidence di bawah angka ini, dianggap "Unidentified"
+CONFIDENCE_THRESHOLD = 60.0 
+
 def load_model_and_labels():
     """Load trained model and label mapping"""
     
@@ -73,7 +77,6 @@ def recognize_from_image(image_path, model, label_map, img_size):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     # Load face detector
-    # Pastikan file xml ada atau gunakan path cv2.data
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     
     # Detect faces
@@ -83,12 +86,6 @@ def recognize_from_image(image_path, model, label_map, img_size):
     
     if len(faces) == 0:
         print("\n[Warning] No faces detected in the image!")
-        print("Tips:")
-        print("  - Make sure the face is clearly visible")
-        print("  - Face should be well-lit and frontal")
-        print("  - Try a different image")
-        
-        # Display image anyway
         cv2.imshow('No Faces Detected', frame)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -112,34 +109,45 @@ def recognize_from_image(image_path, model, label_map, img_size):
         predicted_class = np.argmax(prediction_proba)
         confidence = prediction_proba[0][predicted_class] * 100
         
-        # Get predicted name
-        # Langsung ambil dari label map tanpa split/parsing ekspresi
-        predicted_name = label_map[predicted_class]
-        display_label = predicted_name
+        # --- LOGIC UNIDENTIFIED / UNKNOWN ---
+        is_unknown = False
         
-        # Print results
+        if confidence < CONFIDENCE_THRESHOLD:
+            is_unknown = True
+            predicted_name = "Unidentified"
+            display_label = "Unidentified"
+            color = (100, 100, 100) # Abu-abu gelap
+            text_color = (255, 255, 255)
+        else:
+            predicted_name = label_map[predicted_class]
+            display_label = predicted_name
+            
+            # Color coding for known faces
+            if confidence > 80:
+                color = (0, 255, 0)      # Hijau (Sangat Yakin)
+                text_color = (0, 0, 0)
+            elif confidence > 65:
+                color = (0, 255, 255)    # Kuning (Yakin)
+                text_color = (0, 0, 0)
+            else:
+                color = (0, 0, 255)      # Merah (Kurang Yakin tapi masih diatas threshold)
+                text_color = (255, 255, 255)
+
+        # Print results to terminal
         print(f"\nFace #{idx}:")
-        print(f"  Name: {predicted_name}")
+        print(f"  Result: {predicted_name}")
         print(f"  Confidence: {confidence:.2f}%")
         
-        # Get top 3 predictions
+        # Tampilkan Top 3 hanya jika dikenal atau confidence lumayan
         top_3_indices = np.argsort(prediction_proba[0])[-3:][::-1]
-        print(f"  Top 3 predictions:")
+        print(f"  Top 3 Candidates:")
         for rank, class_idx in enumerate(top_3_indices, 1):
             label = label_map[class_idx]
             conf = prediction_proba[0][class_idx] * 100
             print(f"     {rank}. {label}: {conf:.2f}%")
         
-        # Choose color based on confidence
-        if confidence > 70:
-            color = (0, 255, 0)  # Green - High confidence
-            conf_text = "HIGH"
-        elif confidence > 50:
-            color = (0, 255, 255)  # Yellow - Medium confidence
-            conf_text = "MEDIUM"
-        else:
-            color = (0, 0, 255)  # Red - Low confidence
-            conf_text = "LOW"
+        if is_unknown:
+            print(f"  [!] Threshold Check: FAILED (< {CONFIDENCE_THRESHOLD}%)")
         
         # Draw rectangle around face
         cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
@@ -148,18 +156,19 @@ def recognize_from_image(image_path, model, label_map, img_size):
         label_text = f"{display_label} ({confidence:.1f}%)"
         
         # Background for text
-        text_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
-        cv2.rectangle(frame, (x, y-40), (x + text_size[0] + 10, y), color, -1)
+        font_scale = 0.7
+        thickness = 2
+        (text_w, text_h), _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+        
+        # Draw filled rectangle for text background
+        cv2.rectangle(frame, (x, y-35), (x + text_w + 10, y), color, -1)
         
         # Draw text
-        # Gunakan teks hitam jika background terang (seperti kuning), putih jika gelap
-        text_color = (0, 0, 0) if confidence > 50 and confidence <= 70 else (255, 255, 255)
-        
         cv2.putText(frame, label_text, (x+5, y-10),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, text_color, 2)
+                   cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, thickness)
         
         # Add face number
-        cv2.putText(frame, f"Face #{idx}", (x+5, y+h+25),
+        cv2.putText(frame, f"#{idx}", (x, y+h+25),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
     
     print("\n" + "=" * 60)
@@ -207,11 +216,13 @@ def main():
         return
     
     print("\n" + "-" * 60)
+    print(f"[INFO] Confidence Threshold: {CONFIDENCE_THRESHOLD}%")
+    print("Faces with confidence below this value will be 'Unidentified'")
+    print("-" * 60)
     
     # Get image path from user
     while True:
         print("\nEnter image path (or 'q' to quit):")
-        # Membersihkan tanda kutip jika user drag-and-drop file ke terminal
         image_path = input(">>> ").strip().strip('"').strip("'")
         
         if image_path.lower() == 'q':
@@ -221,12 +232,10 @@ def main():
         if image_path == "":
             continue
             
-        # Recognize faces in image
         recognize_from_image(image_path, model, label_map, img_size)
         
         print("\n" + "-" * 60)
         
-        # Ask if user wants to process another image
         another = input("\nProcess another image? (y/n): ").strip().lower()
         if another != 'y':
             print("\nGoodbye!")
