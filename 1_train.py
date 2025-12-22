@@ -80,18 +80,14 @@ def load_dataset(dataset_path='dataset', img_size=(64, 64)):
         print("ERROR: No valid images were loaded!")
         return None, None, None
     
-    # Convert to numpy arrays
     X = np.array(images)
     
-    # Create label mapping
-    label_names.sort()  # Sort for consistency
+    label_names.sort()  
     label_map = {i: name for i, name in enumerate(label_names)}
     reverse_map = {name: i for i, name in label_map.items()}
     
-    # Convert labels to integers
     y_int = np.array([reverse_map[label] for label in labels])
     
-    # One-hot encode labels
     num_classes = len(label_names)
     y = np.zeros((len(y_int), num_classes))
     y[np.arange(len(y_int)), y_int] = 1
@@ -112,7 +108,6 @@ def train_model():
     print("           FACE RECOGNITION TRAINING - BPNN")
     print("=" * 60)
     
-    # Load dataset
     IMG_SIZE = (64, 64)
     X, y, label_map = load_dataset(img_size=IMG_SIZE)
     
@@ -120,10 +115,9 @@ def train_model():
         print("\nTraining aborted due to dataset loading error.")
         return
     
-    # Network architecture
-    input_size = X.shape[1]  # Flattened image size
-    hidden_size = 128        # Hidden layer neurons
-    output_size = y.shape[1] # Number of classes (People)
+    input_size = X.shape[1]  
+    hidden_size = 128        
+    output_size = y.shape[1] 
     
     print(f"\n{'─' * 60}")
     print("Neural Network Architecture:")
@@ -132,30 +126,24 @@ def train_model():
     print(f"  Output Layer: {output_size} neurons (Classes/People)")
     print(f"{'─' * 60}")
     
-    # Create and train model
     model = BPNN(input_size, hidden_size, output_size, learning_rate=0.1)
     
     print("\nStarting training...")
     print("(This may take a few minutes depending on dataset size)\n")
     
-    # Train the model
     model.train(X, y, epochs=500, batch_size=16, verbose=True)
     
-    # Evaluate final accuracy
     final_accuracy = model.evaluate(X, y)
     print(f"\n{'=' * 60}")
     print(f"Final Training Accuracy: {final_accuracy:.2f}%")
     print(f"{'=' * 60}")
     
-    # Save model
     model.save_model('face_model.pkl')
     
-    # Save label mapping
     with open('label_map.pkl', 'wb') as f:
         pickle.dump(label_map, f)
     print("Label mapping saved to 'label_map.pkl'")
     
-    # Save image size info
     with open('img_size.pkl', 'wb') as f:
         pickle.dump(IMG_SIZE, f)
     print(f"Image size info saved to 'img_size.pkl'")
