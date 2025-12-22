@@ -1,15 +1,3 @@
-"""
-EKSPERIMEN PERBANDINGAN TERINTEGRASI
-- Perbandingan ukuran input image (32x32, 48x48, 64x64, 80x80, 96x96)
-- Perbandingan fungsi aktivasi (Sigmoid, ReLU, Tanh, Leaky ReLU)
-
-Script ini akan:
-1. Train model dengan berbagai konfigurasi
-2. Test dan record hasil
-3. Generate comparison table
-4. Save results untuk analisis
-"""
-
 import os
 import cv2
 import numpy as np
@@ -120,7 +108,8 @@ class BPNN_Flexible(BPNN):
 
 def load_dataset_with_size(dataset_path='dataset', img_size=(64, 64)):
     """
-    Load dataset dengan ukuran image yang bisa disesuaikan
+    Load dataset dengan ukuran image yang bisa disesuaikan.
+    Hanya mengambil IDENTITAS (Nama) sebagai label.
     """
     
     if not os.path.exists(dataset_path):
@@ -137,13 +126,16 @@ def load_dataset_with_size(dataset_path='dataset', img_size=(64, 64)):
     
     for filename in files:
         try:
+            # Parse filename
+            # Format: Name_Index.jpg atau Name_Expression_Index.jpg
+            # Logic: Ambil bagian pertama sebelum underscore sebagai Nama
             parts = filename.rsplit('.', 1)[0].split('_')
-            if len(parts) >= 3:
+            
+            if len(parts) > 0:
                 name = parts[0]
-                expression = parts[1]
-                label = f"{name}_{expression}"
+                label = name
             else:
-                label = parts[0] if parts else filename
+                continue
             
             img_path = os.path.join(dataset_path, filename)
             img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
@@ -221,7 +213,7 @@ def experiment_image_sizes():
             print(f"[ERROR] Gagal load dataset!")
             continue
         
-        print(f"[OK] Dataset loaded: {len(X)} samples, {len(label_map)} classes")
+        print(f"[OK] Dataset loaded: {len(X)} samples, {len(label_map)} classes (People)")
         
         # Setup model
         input_size = X.shape[1]

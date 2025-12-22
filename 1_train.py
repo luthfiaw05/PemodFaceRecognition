@@ -7,7 +7,8 @@ from bpnn import BPNN
 def load_dataset(dataset_path='dataset', img_size=(64, 64)):
     """
     Load images from dataset folder
-    Expected naming: Name_Expression_Index.jpg
+    Expected naming: Name_Index.jpg (Format Baru)
+    or Name_Expression_Index.jpg (Format Lama - akan otomatis ambil namanya saja)
     
     Returns:
         X: Image data (flattened vectors)
@@ -33,17 +34,20 @@ def load_dataset(dataset_path='dataset', img_size=(64, 64)):
     print(f"Found {len(files)} images in dataset")
     
     for filename in files:
-        # Parse filename: Name_Expression_Index.jpg
         try:
+            # Parse filename
+            # Format baru: Name_Index.jpg
+            # Format lama: Name_Expression_Index.jpg
+            # Logic: Kita split berdasarkan '_' dan ambil elemen pertama sebagai Nama.
+            
             parts = filename.rsplit('.', 1)[0].split('_')
-            if len(parts) >= 3:
-                name = parts[0]  # Extract person's name
-                expression = parts[1]  # Extract expression
-                # Combine name and expression as label
-                label = f"{name}_{expression}"
-            else:
-                name = parts[0] if parts else filename
+            
+            # Ambil bagian pertama sebagai nama (Identity)
+            if len(parts) > 0:
+                name = parts[0]
                 label = name
+            else:
+                label = "Unknown"
             
             # Read and preprocess image
             img_path = os.path.join(dataset_path, filename)
@@ -94,8 +98,8 @@ def load_dataset(dataset_path='dataset', img_size=(64, 64)):
     
     print(f"\nDataset loaded successfully!")
     print(f"Total samples: {len(X)}")
-    print(f"Number of classes (Name_Expression): {num_classes}")
-    print(f"Classes in dataset: {label_names}")
+    print(f"Number of classes (People): {num_classes}")
+    print(f"Classes (Names): {label_names}")
     print(f"Image size: {img_size}")
     print(f"Feature vector size: {X.shape[1]}")
     
@@ -119,13 +123,13 @@ def train_model():
     # Network architecture
     input_size = X.shape[1]  # Flattened image size
     hidden_size = 128        # Hidden layer neurons
-    output_size = y.shape[1] # Number of classes
+    output_size = y.shape[1] # Number of classes (People)
     
     print(f"\n{'─' * 60}")
     print("Neural Network Architecture:")
     print(f"  Input Layer:  {input_size} neurons")
     print(f"  Hidden Layer: {hidden_size} neurons")
-    print(f"  Output Layer: {output_size} neurons")
+    print(f"  Output Layer: {output_size} neurons (Classes/People)")
     print(f"{'─' * 60}")
     
     # Create and train model

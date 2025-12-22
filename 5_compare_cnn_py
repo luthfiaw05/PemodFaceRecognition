@@ -1,13 +1,12 @@
 import numpy as np
 import time
-import pickle
 import matplotlib.pyplot as plt
 from bpnn import BPNN
 import os
 import cv2
 
 def load_dataset_bpnn(dataset_path='dataset', img_size=(64, 64)):
-    """Load dataset for BPNN (flattened)"""
+    """Load dataset for BPNN (flattened) - Identity Only"""
     
     images = []
     labels = []
@@ -17,14 +16,17 @@ def load_dataset_bpnn(dataset_path='dataset', img_size=(64, 64)):
     
     for filename in files:
         try:
+            # Parse filename
+            # Format: Name_Index.jpg or Name_Expression_Index.jpg
+            # Logic: Take the first part as the name
             parts = filename.rsplit('.', 1)[0].split('_')
-            if len(parts) >= 3:
-                name = parts[0]
-                expression = parts[1]
-                label = f"{name}_{expression}"
-            else:
-                label = parts[0] if parts else filename
             
+            if len(parts) > 0:
+                name = parts[0]
+                label = name
+            else:
+                continue
+
             img_path = os.path.join(dataset_path, filename)
             img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
             
@@ -57,7 +59,7 @@ def load_dataset_bpnn(dataset_path='dataset', img_size=(64, 64)):
     return X, y, label_map, y_int
 
 def load_dataset_cnn(dataset_path='dataset', img_size=(64, 64)):
-    """Load dataset for CNN (2D images)"""
+    """Load dataset for CNN (2D images) - Identity Only"""
     
     images = []
     labels = []
@@ -67,13 +69,16 @@ def load_dataset_cnn(dataset_path='dataset', img_size=(64, 64)):
     
     for filename in files:
         try:
+            # Parse filename
+            # Format: Name_Index.jpg or Name_Expression_Index.jpg
+            # Logic: Take the first part as the name
             parts = filename.rsplit('.', 1)[0].split('_')
-            if len(parts) >= 3:
+            
+            if len(parts) > 0:
                 name = parts[0]
-                expression = parts[1]
-                label = f"{name}_{expression}"
+                label = name
             else:
-                label = parts[0] if parts else filename
+                continue
             
             img_path = os.path.join(dataset_path, filename)
             img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
@@ -83,7 +88,7 @@ def load_dataset_cnn(dataset_path='dataset', img_size=(64, 64)):
             
             img = cv2.resize(img, img_size)
             img = img.astype(np.float32) / 255.0
-            img = np.expand_dims(img, axis=-1)  # Add channel dimension
+            img = np.expand_dims(img, axis=-1)  # Add channel dimension for CNN
             
             images.append(img)
             labels.append(label)
@@ -113,20 +118,22 @@ def train_bpnn_model(X, y, epochs=500):
     model = BPNN(input_size, hidden_size, output_size, learning_rate=0.1)
     
     start_time = time.time()
+    # Reduced verbosity for comparison script
     model.train(X, y, epochs=epochs, batch_size=16, verbose=False)
     training_time = time.time() - start_time
     
     accuracy = model.evaluate(X, y)
     
-    # Model size
+    # Model size calculation
     model_size = (model.weights_ih.nbytes + model.weights_ho.nbytes + 
                   model.bias_h.nbytes + model.bias_o.nbytes) / (1024 * 1024)
     
-    # Inference speed
+    # Inference speed test
     inference_times = []
+    test_batch = X[:10] if len(X) >= 10 else X
     for _ in range(100):
         start = time.time()
-        _ = model.predict(X[:10])
+        _ = model.predict(test_batch)
         inference_times.append(time.time() - start)
     avg_inference_time = np.mean(inference_times) * 1000
     
@@ -198,8 +205,8 @@ def train_cnn_model(X, y, num_classes, epochs=50):
     
     model = create_cnn_model(X.shape[1:], num_classes)
     
-    print(f"CNN Architecture:")
-    model.summary()
+    print(f"CNN Architecture created for {num_classes} people/classes.")
+    # model.summary() # Optional: Commented out to reduce clutter
     
     start_time = time.time()
     
@@ -221,11 +228,12 @@ def train_cnn_model(X, y, num_classes, epochs=50):
     # Model size (approximate)
     model_size = sum([np.prod(w.shape) for w in model.get_weights()]) * 4 / (1024 * 1024)
     
-    # Inference speed
+    # Inference speed test
     inference_times = []
+    test_batch = X[:10] if len(X) >= 10 else X
     for _ in range(100):
         start = time.time()
-        _ = model.predict(X[:10], verbose=0)
+        _ = model.predict(test_batch, verbose=0)
         inference_times.append(time.time() - start)
     avg_inference_time = np.mean(inference_times) * 1000
     
@@ -248,7 +256,7 @@ def plot_comparison(bpnn_results, cnn_results):
     fig = plt.figure(figsize=(16, 10))
     gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
     
-    fig.suptitle('Deep Comparison: BPNN vs CNN for Face Recognition', 
+    fig.suptitle('Deep Comparison: BPNN vs CNN for Face Recognition (Identity Only)', 
                  fontsize=18, fontweight='bold')
     
     models = ['BPNN\n(Custom)', 'CNN\n(Deep Learning)']
@@ -318,8 +326,8 @@ def plot_comparison(bpnn_results, cnn_results):
     
     # 6. Speed Ratio (BPNN as baseline)
     ax6 = fig.add_subplot(gs[1, 2])
-    train_ratio = cnn_results['training_time'] / bpnn_results['training_time']
-    infer_ratio = cnn_results['inference_time'] / bpnn_results['inference_time']
+    train_ratio = cnn_results['training_time'] / bpnn_results['training_time'] if bpnn_results['training_time'] > 0 else 0
+    infer_ratio = cnn_results['inference_time'] / bpnn_results['inference_time'] if bpnn_results['inference_time'] > 0 else 0
     ratios = [train_ratio, infer_ratio]
     labels = ['Training', 'Inference']
     bars6 = ax6.bar(labels, ratios, color=['#9b59b6', '#f39c12'], alpha=0.7, edgecolor='black')
@@ -388,25 +396,30 @@ def print_detailed_analysis(bpnn_results, cnn_results):
     print(f"\n{'Metric':<25} {'BPNN':<25} {'CNN':<25} {'Ratio':<10}")
     print("-" * 80)
     
+    t_ratio = cnn_results['training_time']/bpnn_results['training_time'] if bpnn_results['training_time'] > 0 else 0
     print(f"{'Training Time':<25} {bpnn_results['training_time']:>23.2f}s "
           f"{cnn_results['training_time']:>23.2f}s "
-          f"{cnn_results['training_time']/bpnn_results['training_time']:>8.2f}x")
+          f"{t_ratio:>8.2f}x")
     
+    a_ratio = cnn_results['accuracy']/bpnn_results['accuracy'] if bpnn_results['accuracy'] > 0 else 0
     print(f"{'Accuracy':<25} {bpnn_results['accuracy']:>22.2f}% "
           f"{cnn_results['accuracy']:>22.2f}% "
-          f"{cnn_results['accuracy']/bpnn_results['accuracy']:>8.2f}x")
+          f"{a_ratio:>8.2f}x")
     
+    i_ratio = cnn_results['inference_time']/bpnn_results['inference_time'] if bpnn_results['inference_time'] > 0 else 0
     print(f"{'Inference Time':<25} {bpnn_results['inference_time']:>22.2f}ms "
           f"{cnn_results['inference_time']:>22.2f}ms "
-          f"{cnn_results['inference_time']/bpnn_results['inference_time']:>8.2f}x")
+          f"{i_ratio:>8.2f}x")
     
+    s_ratio = cnn_results['model_size']/bpnn_results['model_size'] if bpnn_results['model_size'] > 0 else 0
     print(f"{'Model Size':<25} {bpnn_results['model_size']:>22.2f}MB "
           f"{cnn_results['model_size']:>22.2f}MB "
-          f"{cnn_results['model_size']/bpnn_results['model_size']:>8.2f}x")
+          f"{s_ratio:>8.2f}x")
     
+    p_ratio = cnn_results['parameters']/bpnn_results['parameters'] if bpnn_results['parameters'] > 0 else 0
     print(f"{'Parameters':<25} {bpnn_results['parameters']:>23,} "
           f"{cnn_results['parameters']:>23,} "
-          f"{cnn_results['parameters']/bpnn_results['parameters']:>8.2f}x")
+          f"{p_ratio:>8.2f}x")
     
     print("\n" + "=" * 80)
     print("KEY INSIGHTS")
@@ -422,7 +435,7 @@ def print_detailed_analysis(bpnn_results, cnn_results):
         print(f"   CNN is MORE ACCURATE by {acc_diff:.2f}%")
     
     print("\n2. TRAINING SPEED:")
-    train_ratio = cnn_results['training_time'] / bpnn_results['training_time']
+    train_ratio = cnn_results['training_time'] / bpnn_results['training_time'] if bpnn_results['training_time'] > 0 else 0
     if train_ratio > 1:
         print(f"   BPNN trains {train_ratio:.1f}x FASTER than CNN")
         print(f"   CNN takes {train_ratio:.1f} times longer to train")
@@ -430,7 +443,7 @@ def print_detailed_analysis(bpnn_results, cnn_results):
         print(f"   CNN trains {1/train_ratio:.1f}x FASTER than BPNN")
     
     print("\n3. INFERENCE SPEED:")
-    infer_ratio = cnn_results['inference_time'] / bpnn_results['inference_time']
+    infer_ratio = cnn_results['inference_time'] / bpnn_results['inference_time'] if bpnn_results['inference_time'] > 0 else 0
     if infer_ratio > 1:
         print(f"   BPNN is {infer_ratio:.1f}x FASTER at inference")
         print(f"   Better for REAL-TIME applications")
@@ -438,15 +451,10 @@ def print_detailed_analysis(bpnn_results, cnn_results):
         print(f"   CNN is {1/infer_ratio:.1f}x FASTER at inference")
     
     print("\n4. MODEL COMPLEXITY:")
-    param_ratio = cnn_results['parameters'] / bpnn_results['parameters']
+    param_ratio = cnn_results['parameters'] / bpnn_results['parameters'] if bpnn_results['parameters'] > 0 else 0
     print(f"   CNN has {param_ratio:.1f}x MORE parameters than BPNN")
     print(f"   BPNN: {bpnn_results['parameters']:,} parameters")
     print(f"   CNN: {cnn_results['parameters']:,} parameters")
-    
-    print("\n5. RESOURCE REQUIREMENTS:")
-    size_ratio = cnn_results['model_size'] / bpnn_results['model_size']
-    print(f"   CNN model is {size_ratio:.1f}x LARGER")
-    print(f"   BPNN is more MEMORY EFFICIENT")
     
     print("\n" + "=" * 80)
     print("RECOMMENDATION")
@@ -495,7 +503,7 @@ def main():
     """Main comparison function"""
     
     print("=" * 80)
-    print("COMPREHENSIVE COMPARISON: BPNN vs CNN")
+    print("COMPREHENSIVE COMPARISON: BPNN vs CNN (Identity Only)")
     print("=" * 80)
     
     # Check dataset
@@ -515,11 +523,11 @@ def main():
     # Load data for both models
     print("\n[Loading Dataset for BPNN...]")
     X_bpnn, y_bpnn, label_map, _ = load_dataset_bpnn()
-    print(f"[OK] BPNN dataset loaded: {len(X_bpnn)} samples")
+    print(f"[OK] BPNN dataset loaded: {len(X_bpnn)} samples, {y_bpnn.shape[1]} classes")
     
     print("\n[Loading Dataset for CNN...]")
     X_cnn, y_cnn, num_classes = load_dataset_cnn()
-    print(f"[OK] CNN dataset loaded: {len(X_cnn)} samples")
+    print(f"[OK] CNN dataset loaded: {len(X_cnn)} samples, {num_classes} classes")
     
     # Train BPNN
     print("\n" + "=" * 80)

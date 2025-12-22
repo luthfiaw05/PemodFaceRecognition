@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 from bpnn import BPNN
+import time  # Ditambahkan untuk perhitungan FPS yang lebih akurat jika diperlukan
 
 def load_model_and_labels():
     """Load trained model and label mapping"""
@@ -13,7 +14,8 @@ def load_model_and_labels():
         return None, None, None
     
     # Load model
-    model = BPNN(0, 0, 0)  # Dummy initialization
+    # Initialize with dummy values, actual structure is loaded from file
+    model = BPNN(input_size=1, hidden_size=1, output_size=1) 
     model.load_model('face_model.pkl')
     
     # Load label mapping
@@ -77,6 +79,7 @@ def recognize_faces():
     # For FPS calculation
     fps_counter = 0
     fps_start = cv2.getTickCount()
+    fps = 0
     
     while True:
         ret, frame = cap.read()
@@ -105,51 +108,47 @@ def recognize_faces():
             confidence = prediction_proba[0][predicted_class] * 100
             
             # Get predicted name
-            predicted_label = label_map[predicted_class]
+            # HAPUS LOGIKA EKSPRESI DISINI
+            # Karena label_map sekarang hanya berisi "Nama", kita langsung pakai saja.
+            predicted_name = label_map[predicted_class]
             
-            # Parse label to get name and expression
-            if '_' in predicted_label:
-                parts = predicted_label.split('_')
-                predicted_name = parts[0]
-                predicted_expression = parts[1] if len(parts) > 1 else ""
-                display_label = f"{predicted_name} - {predicted_expression}"
-            else:
-                predicted_name = predicted_label
-                predicted_expression = ""
-                display_label = predicted_name
+            display_label = predicted_name
             
             # Choose color based on confidence
-            if confidence > 70:
-                color = (0, 255, 0)  # Green - High confidence
-            elif confidence > 50:
-                color = (0, 255, 255)  # Yellow - Medium confidence
+            if confidence > 80:
+                color = (0, 255, 0)      # Green - High confidence
+            elif confidence > 60:
+                color = (0, 255, 255)    # Yellow - Medium confidence
             else:
-                color = (0, 0, 255)  # Red - Low confidence
+                color = (0, 0, 255)      # Red - Low confidence
             
             # Draw rectangle around face
             cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
             
             # Display name and confidence
-            label = f"{display_label} ({confidence:.1f}%)"
+            label_text = f"{display_label} ({confidence:.1f}%)"
             
             # Background for text
-            text_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
+            text_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
             cv2.rectangle(frame, (x, y-35), (x + text_size[0] + 10, y), color, -1)
             
             # Draw text
-            cv2.putText(frame, label, (x+5, y-10),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            # Gunakan warna hitam (0,0,0) untuk teks jika background kuning/hijau agar kontras,
+            # atau putih (255,255,255) jika background merah/biru. 
+            # Disini kita pakai hitam/putih simple logic atau statis.
+            text_color = (0, 0, 0) if confidence > 60 else (255, 255, 255)
+            
+            cv2.putText(frame, label_text, (x+5, y-10),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2)
         
         # Calculate FPS
         fps_counter += 1
-        if fps_counter >= 30:
+        if fps_counter >= 15: # Update setiap 15 frame agar tidak terlalu flicker
             fps_end = cv2.getTickCount()
             time_diff = (fps_end - fps_start) / cv2.getTickFrequency()
             fps = fps_counter / time_diff
             fps_counter = 0
             fps_start = cv2.getTickCount()
-        else:
-            fps = 0
         
         # Display info
         info_text = f"Faces: {len(faces)} | Press 'q' to quit"

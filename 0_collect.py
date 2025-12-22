@@ -4,7 +4,7 @@ import os
 def collect_faces():
     """
     Collect face images from webcam
-    Images are saved as: Name_Expression_Index.jpg
+    Images are saved as: Name_Index.jpg
     """
     
     # Create dataset folder if it doesn't exist
@@ -14,8 +14,13 @@ def collect_faces():
     
     # Get user input
     name = input("Enter person's name: ").strip()
-    expression = input("Enter expression (e.g., Senyum, Sedih, Netral): ").strip()
-    num_images = int(input("How many images to collect? (recommended: 20-50): "))
+    # Bagian input ekspresi dihapus karena tidak lagi digunakan
+    
+    try:
+        num_images = int(input("How many images to collect? (recommended: 20-50): "))
+    except ValueError:
+        print("Invalid input for number of images. Defaulting to 20.")
+        num_images = 20
     
     # Initialize camera
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -25,10 +30,11 @@ def collect_faces():
         return
     
     # Load face detector
+    # Pastikan path haarcascade benar atau gunakan bawaan cv2.data
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     
     count = 0
-    print(f"\nCollecting {num_images} images...")
+    print(f"\nCollecting {num_images} images for '{name}'...")
     print("Press SPACE to capture, ESC to cancel")
     
     while count < num_images:
@@ -62,10 +68,12 @@ def collect_faces():
                 (x, y, w, h) = faces[0]
                 face_img = frame[y:y+h, x:x+w]
                 
-                # Save image with naming format: Name_Expression_Index.jpg
+                # Save image with naming format: Name_Index.jpg
+                # Format baru: Nama_Index.jpg (tanpa ekspresi)
                 count += 1
-                filename = f"{name}_{expression}_{count}.jpg"
+                filename = f"{name}_{count}.jpg"
                 filepath = os.path.join('dataset', filename)
+                
                 cv2.imwrite(filepath, face_img)
                 print(f"Saved: {filename}")
             else:

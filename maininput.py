@@ -73,6 +73,7 @@ def recognize_from_image(image_path, model, label_map, img_size):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     # Load face detector
+    # Pastikan file xml ada atau gunakan path cv2.data
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     
     # Detect faces
@@ -112,24 +113,13 @@ def recognize_from_image(image_path, model, label_map, img_size):
         confidence = prediction_proba[0][predicted_class] * 100
         
         # Get predicted name
-        predicted_label = label_map[predicted_class]
-        
-        # Parse label to get name and expression
-        if '_' in predicted_label:
-            parts = predicted_label.split('_')
-            predicted_name = parts[0]
-            predicted_expression = parts[1] if len(parts) > 1 else ""
-            display_label = f"{predicted_name} - {predicted_expression}"
-        else:
-            predicted_name = predicted_label
-            predicted_expression = ""
-            display_label = predicted_label
+        # Langsung ambil dari label map tanpa split/parsing ekspresi
+        predicted_name = label_map[predicted_class]
+        display_label = predicted_name
         
         # Print results
         print(f"\nFace #{idx}:")
         print(f"  Name: {predicted_name}")
-        if predicted_expression:
-            print(f"  Expression: {predicted_expression}")
         print(f"  Confidence: {confidence:.2f}%")
         
         # Get top 3 predictions
@@ -138,17 +128,7 @@ def recognize_from_image(image_path, model, label_map, img_size):
         for rank, class_idx in enumerate(top_3_indices, 1):
             label = label_map[class_idx]
             conf = prediction_proba[0][class_idx] * 100
-            
-            # Parse label
-            if '_' in label:
-                parts = label.split('_')
-                name = parts[0]
-                expr = parts[1] if len(parts) > 1 else ""
-                display = f"{name} - {expr}"
-            else:
-                display = label
-            
-            print(f"     {rank}. {display}: {conf:.2f}%")
+            print(f"     {rank}. {label}: {conf:.2f}%")
         
         # Choose color based on confidence
         if confidence > 70:
@@ -165,15 +145,18 @@ def recognize_from_image(image_path, model, label_map, img_size):
         cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)
         
         # Display name and confidence
-        label = f"{display_label} ({confidence:.1f}%)"
+        label_text = f"{display_label} ({confidence:.1f}%)"
         
         # Background for text
-        text_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
+        text_size = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
         cv2.rectangle(frame, (x, y-40), (x + text_size[0] + 10, y), color, -1)
         
         # Draw text
-        cv2.putText(frame, label, (x+5, y-10),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        # Gunakan teks hitam jika background terang (seperti kuning), putih jika gelap
+        text_color = (0, 0, 0) if confidence > 50 and confidence <= 70 else (255, 255, 255)
+        
+        cv2.putText(frame, label_text, (x+5, y-10),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, text_color, 2)
         
         # Add face number
         cv2.putText(frame, f"Face #{idx}", (x+5, y+h+25),
@@ -228,15 +211,16 @@ def main():
     # Get image path from user
     while True:
         print("\nEnter image path (or 'q' to quit):")
-        image_path = input(">>> ").strip()
+        # Membersihkan tanda kutip jika user drag-and-drop file ke terminal
+        image_path = input(">>> ").strip().strip('"').strip("'")
         
         if image_path.lower() == 'q':
             print("\nGoodbye!")
             break
         
-        # Remove quotes if present
-        image_path = image_path.strip('"\'')
-        
+        if image_path == "":
+            continue
+            
         # Recognize faces in image
         recognize_from_image(image_path, model, label_map, img_size)
         

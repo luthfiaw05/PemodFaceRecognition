@@ -26,13 +26,17 @@ def load_test_data():
     
     for filename in files:
         try:
+            # Parse filename
+            # Format baru: Name_Index.jpg
+            # Format lama: Name_Expression_Index.jpg
+            # Logic: Ambil bagian pertama sebagai Nama
             parts = filename.rsplit('.', 1)[0].split('_')
-            if len(parts) >= 3:
+            
+            if len(parts) > 0:
                 name = parts[0]
-                expression = parts[1]
-                label = f"{name}_{expression}"
+                label = name
             else:
-                label = parts[0] if parts else filename
+                label = "Unknown"
             
             img_path = os.path.join(dataset_path, filename)
             img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
@@ -40,6 +44,7 @@ def load_test_data():
             if img is None:
                 continue
             
+            # Preprocess image
             img = cv2.resize(img, img_size)
             img = img.astype(np.float32) / 255.0
             img_vector = img.flatten()
@@ -58,9 +63,15 @@ def load_test_data():
         return None, None, None
     
     X = np.array(images)
+    
+    # Sort label names to ensure consistency with training
     label_names.sort()
+    
+    # Create mapping
     label_map = {i: name for i, name in enumerate(label_names)}
     reverse_map = {name: i for i, name in label_map.items()}
+    
+    # Convert string labels to integers
     y_int = np.array([reverse_map[label] for label in labels])
     
     return X, y_int, label_map
@@ -68,12 +79,6 @@ def load_test_data():
 def plot_confusion_matrix(y_true, y_pred, label_map, save_path='confusion_matrix.png'):
     """
     Generate and display confusion matrix heatmap
-    
-    Args:
-        y_true: True labels (integers)
-        y_pred: Predicted labels (integers)
-        label_map: Dictionary mapping integers to class names
-        save_path: Path to save the figure
     """
     from sklearn.metrics import confusion_matrix
     
@@ -84,14 +89,14 @@ def plot_confusion_matrix(y_true, y_pred, label_map, save_path='confusion_matrix
     class_names = [label_map[i] for i in range(len(label_map))]
     
     # Create figure
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=(10, 8))
     
     # Plot heatmap
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
                 xticklabels=class_names, yticklabels=class_names,
                 cbar_kws={'label': 'Count'})
     
-    plt.title('Confusion Matrix - Face Recognition BPNN', fontsize=16, fontweight='bold')
+    plt.title('Confusion Matrix - Face Recognition (Identity Only)', fontsize=16, fontweight='bold')
     plt.ylabel('True Label', fontsize=12)
     plt.xlabel('Predicted Label', fontsize=12)
     plt.xticks(rotation=45, ha='right')
@@ -110,11 +115,6 @@ def plot_confusion_matrix(y_true, y_pred, label_map, save_path='confusion_matrix
 def calculate_metrics(y_true, y_pred, label_map):
     """
     Calculate detailed metrics per class
-    
-    Args:
-        y_true: True labels
-        y_pred: Predicted labels
-        label_map: Dictionary mapping integers to class names
     """
     from sklearn.metrics import classification_report, accuracy_score
     
@@ -134,8 +134,18 @@ def calculate_metrics(y_true, y_pred, label_map):
     class_names = [label_map[i] for i in sorted(label_map.keys())]
     
     # Classification report
-    report = classification_report(y_true, y_pred, target_names=class_names, digits=4)
-    print(report)
+    # We use a try-except block just in case some classes are missing in the test set
+    try:
+        report = classification_report(y_true, y_pred, target_names=class_names, digits=4)
+        print(report)
+    except Exception as e:
+        print(f"Could not generate full report: {e}")
+        print("Simple Accuracy per class:")
+        for i, name in label_map.items():
+            mask = y_true == i
+            if np.sum(mask) > 0:
+                acc = np.mean(y_pred[mask] == y_true[mask]) * 100
+                print(f"  {name}: {acc:.2f}%")
     
     return accuracy
 
@@ -155,7 +165,7 @@ def plot_accuracy_per_class(y_true, y_pred, label_map, save_path='accuracy_per_c
             accuracies.append(0)
     
     # Create bar plot
-    plt.figure(figsize=(14, 6))
+    plt.figure(figsize=(12, 6))
     colors = ['green' if acc > 90 else 'orange' if acc > 70 else 'red' for acc in accuracies]
     bars = plt.bar(range(len(class_names)), accuracies, color=colors, alpha=0.7, edgecolor='black')
     
@@ -166,9 +176,9 @@ def plot_accuracy_per_class(y_true, y_pred, label_map, save_path='accuracy_per_c
                 f'{acc:.1f}%',
                 ha='center', va='bottom', fontweight='bold')
     
-    plt.xlabel('Class', fontsize=12)
+    plt.xlabel('Person (Class)', fontsize=12)
     plt.ylabel('Accuracy (%)', fontsize=12)
-    plt.title('Per-Class Accuracy', fontsize=16, fontweight='bold')
+    plt.title('Per-Person Recognition Accuracy', fontsize=16, fontweight='bold')
     plt.xticks(range(len(class_names)), class_names, rotation=45, ha='right')
     plt.ylim(0, 105)
     plt.grid(axis='y', alpha=0.3)
@@ -185,7 +195,7 @@ def evaluate_model():
     """Main evaluation function"""
     
     print("=" * 70)
-    print("MODEL EVALUATION WITH CONFUSION MATRIX")
+    print("MODEL EVALUATION (IDENTITY ONLY)")
     print("=" * 70)
     
     # Check if model exists
@@ -196,22 +206,62 @@ def evaluate_model():
     
     # Load model
     print("\n[Loading Model...]")
+    # Initialize dummy model
     model = BPNN(0, 0, 0)
     model.load_model('face_model.pkl')
     
-    with open('label_map.pkl', 'rb') as f:
-        label_map = pickle.load(f)
+    # Load saved label map from training to ensure consistency
+    if os.path.exists('label_map.pkl'):
+        with open('label_map.pkl', 'rb') as f:
+            train_label_map = pickle.load(f)
+    else:
+        print("Warning: label_map.pkl not found. Evaluation might be mismatched if classes differ.")
+        train_label_map = None
     
     print("[OK] Model loaded successfully!")
     
     # Load test data
     print("\n[Loading Dataset...]")
-    X, y_true, _ = load_test_data()
+    X, y_true, test_label_map = load_test_data()
     
     if X is None:
         print("[X] Failed to load dataset")
         return
     
+    # Consistency Check
+    # Ensure the test data mapping matches the training mapping
+    if train_label_map:
+        # Check if classes match
+        train_classes = sorted(list(train_label_map.values()))
+        test_classes = sorted(list(test_label_map.values()))
+        
+        if train_classes != test_classes:
+            print("\n[WARNING] Classes in dataset differ from training classes!")
+            print(f"Training classes: {train_classes}")
+            print(f"Dataset classes:  {test_classes}")
+            
+            # Remap y_true to match training indices
+            # Create a map from Name -> Training Index
+            name_to_train_idx = {name: idx for idx, name in train_label_map.items()}
+            
+            new_y_true = []
+            valid_indices = []
+            
+            for i, local_idx in enumerate(y_true):
+                name = test_label_map[local_idx]
+                if name in name_to_train_idx:
+                    new_y_true.append(name_to_train_idx[name])
+                    valid_indices.append(i)
+            
+            X = X[valid_indices]
+            y_true = np.array(new_y_true)
+            label_map = train_label_map
+            print(f"[INFO] Filtered dataset to match training classes. {len(X)} samples remaining.")
+        else:
+            label_map = test_label_map
+    else:
+        label_map = test_label_map
+
     print(f"[OK] Loaded {len(X)} samples")
     print(f"[OK] Number of classes: {len(label_map)}")
     
@@ -253,10 +303,14 @@ def evaluate_model():
                 unique, counts = np.unique(pred_labels, return_counts=True)
                 
                 if len(unique) > 0:
-                    most_common = unique[np.argmax(counts)]
-                    count = counts[np.argmax(counts)]
+                    most_common_idx = np.argmax(counts)
+                    most_common = unique[most_common_idx]
+                    count = counts[most_common_idx]
                     
-                    print(f"  {label_map[true_label]} misclassified as {label_map[most_common]}: {count} times")
+                    true_name = label_map.get(true_label, f"Unknown({true_label})")
+                    pred_name = label_map.get(most_common, f"Unknown({most_common})")
+                    
+                    print(f"  '{true_name}' misclassified as '{pred_name}': {count} times")
     
     print("\n" + "=" * 70)
     print("EVALUATION COMPLETED!")

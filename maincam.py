@@ -30,8 +30,8 @@ def run_camera_recognition():
         print("\nOptions:")
         print("  1. Run 'python 1_train.py' to train the model")
         print("  2. Make sure you have images in the 'dataset' folder")
-        print("\nImage naming format: Name_Expression_Index.jpg")
-        print("Example: Fathoni_Senyum_1.jpg")
+        print("\nImage naming format: Name_Index.jpg")
+        print("Example: Fathoni_1.jpg")
         return
     
     print("[OK] Model found!")
@@ -89,8 +89,8 @@ def print_usage_info():
     
     print("\n" + "=" * 60)
     print("IMAGE NAMING FORMAT:")
-    print("  Name_Expression_Index.jpg")
-    print("  Example: Fathoni_Senyum_1.jpg")
+    print("  Name_Index.jpg")
+    print("  Example: Fathoni_1.jpg")
     print("=" * 60)
 
 if __name__ == "__main__":

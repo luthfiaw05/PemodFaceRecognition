@@ -114,7 +114,15 @@ def camera_recognition():
         return
     
     print("[OK] Model found. Launching camera...\n")
-    os.system(f'"{sys.executable}" maincam.py')
+    # Pastikan maincam.py atau 2_recognize.py yang digunakan
+    # Disini diasumsikan 2_recognize.py adalah main script untuk kamera sesuai urutan sebelumnya
+    if os.path.exists('2_recognize.py'):
+         os.system(f'"{sys.executable}" 2_recognize.py')
+    elif os.path.exists('maincam.py'):
+         os.system(f'"{sys.executable}" maincam.py')
+    else:
+         print("[X] ERROR: Recognition script not found!")
+         
     input("\nPress Enter to continue...")
 
 def image_recognition():
@@ -130,7 +138,12 @@ def image_recognition():
         return
     
     print("[OK] Model found. Starting recognition...\n")
-    os.system(f'"{sys.executable}" maininput.py')
+    
+    if os.path.exists('maininput.py'):
+        os.system(f'"{sys.executable}" maininput.py')
+    else:
+        print("[X] ERROR: 'maininput.py' not found!")
+        
     input("\nPress Enter to continue...")
 
 def evaluate_model():
@@ -161,7 +174,12 @@ def compare_bpnn():
         return
     
     print("[OK] Starting comparison...\n")
-    os.system(f'"{sys.executable}" 4_compare_bpnn.py')
+    # Asumsi file comparison ada (biasanya experiment_comparison.py atau sejenis)
+    if os.path.exists('experiment_comparison.py'):
+        os.system(f'"{sys.executable}" experiment_comparison.py')
+    else:
+        print("[Info] Comparison script not found, skipping...")
+        
     input("\nPress Enter to continue...")
 
 def compare_cnn():
@@ -191,7 +209,7 @@ def show_status():
     print("-" * 70)
     
     required_files = ['bpnn.py', '0_collect.py', '1_train.py', 
-                      '2_recognize.py', 'maincam.py', 'maininput.py']
+                      '2_recognize.py', '3_evaluation.py', '5_compare_cnn.py']
     
     for file in required_files:
         status = "[OK]" if os.path.exists(file) else "[X] MISSING"
@@ -220,6 +238,7 @@ def show_status():
             people = {}
             for file in files:
                 try:
+                    # Logic: Name_Index.jpg -> Split '_' take first element
                     name = file.split('_')[0]
                     people[name] = people.get(name, 0) + 1
                 except:
@@ -264,8 +283,8 @@ def show_help():
     1. Collect Images (Option 1)
        - Use your webcam to capture face images
        - Collect 20-50 images per person
-       - Images saved as: Name_Expression_Index.jpg
-       - Example: Fathoni_Senyum_1.jpg
+       - Images saved as: Name_Index.jpg
+       - Example: Fathoni_1.jpg
     
     2. Train Model (Option 2)
        - Trains the neural network on your images
@@ -289,15 +308,15 @@ def show_help():
     print("IMAGE NAMING FORMAT:")
     print("-" * 70)
     print("""
-  Format: Name_Expression_Index.jpg
+  Format: Name_Index.jpg
   
   Examples:
-    - Fathoni_Senyum_1.jpg    (Fathoni, smiling, image 1)
-    - Alice_Netral_10.jpg     (Alice, neutral, image 10)
-    - Bob_Sedih_5.jpg         (Bob, sad, image 5)
+    - Fathoni_1.jpg    (Fathoni, image 1)
+    - Alice_10.jpg     (Alice, image 10)
+    - Bob_5.jpg        (Bob, image 5)
   
-  Note: The expression field is for organization only.
-        The model recognizes people, not expressions.
+  Note: Previous version used 'Expression' in filename.
+        This version focuses purely on identity recognition.
 """)
     
     print("\n" + "-" * 70)
@@ -307,10 +326,10 @@ def show_help():
   - Collect 30-50 images per person
   - Use good, consistent lighting
   - Include different angles (slightly left/right)
-  - Include different expressions
+  - VARY YOUR EXPRESSIONS during collection (smile, neutral, open mouth)
+    to make the model recognize you in any situation.
   - Keep face centered and visible
   - Avoid glasses glare if possible
-  - Use similar lighting for training and recognition
 """)
     
     print("\n" + "-" * 70)
