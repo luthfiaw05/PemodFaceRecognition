@@ -19,11 +19,9 @@ class BPNN:
         self.output_size = output_size
         self.learning_rate = learning_rate
         
-        # Initialize weights with small random values
         self.weights_ih = np.random.randn(input_size, hidden_size) * 0.01
         self.weights_ho = np.random.randn(hidden_size, output_size) * 0.01
         
-        # Initialize biases
         self.bias_h = np.zeros((1, hidden_size))
         self.bias_o = np.zeros((1, output_size))
         
@@ -69,17 +67,14 @@ class BPNN:
             y: True labels (one-hot encoded)
             output: Network output from forward pass
         """
-        m = X.shape[0]  # batch size
+        m = X.shape[0]  
         
-        # Output layer error
         output_error = output - y
         output_delta = output_error
         
-        # Hidden layer error
         hidden_error = np.dot(output_delta, self.weights_ho.T)
         hidden_delta = hidden_error * self.sigmoid_derivative(self.hidden_output)
         
-        # Update weights and biases
         self.weights_ho -= self.learning_rate * np.dot(self.hidden_output.T, output_delta) / m
         self.bias_o -= self.learning_rate * np.sum(output_delta, axis=0, keepdims=True) / m
         
@@ -100,29 +95,23 @@ class BPNN:
         n_samples = X.shape[0]
         
         for epoch in range(epochs):
-            # Shuffle data
             indices = np.random.permutation(n_samples)
             X_shuffled = X[indices]
             y_shuffled = y[indices]
             
             total_loss = 0
             
-            # Mini-batch training
             for i in range(0, n_samples, batch_size):
                 batch_X = X_shuffled[i:i+batch_size]
                 batch_y = y_shuffled[i:i+batch_size]
                 
-                # Forward pass
                 output = self.forward(batch_X)
                 
-                # Calculate loss (cross-entropy)
                 loss = -np.sum(batch_y * np.log(output + 1e-8)) / batch_X.shape[0]
                 total_loss += loss
                 
-                # Backward pass
                 self.backward(batch_X, batch_y, output)
             
-            # Print progress
             if verbose and (epoch + 1) % 100 == 0:
                 avg_loss = total_loss / (n_samples / batch_size)
                 accuracy = self.evaluate(X, y)
